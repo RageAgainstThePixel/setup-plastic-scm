@@ -30,24 +30,17 @@ function getTempDirectory(): string {
 async function install() {
     const version = core.getInput('version');
     switch (process.platform) {
-        case 'win32': await installWindows(version);
-            break;
-        case 'linux': await installLinux(version);
-            break;
-        case 'darwin': await installMac(version);
-            break;
+        case 'win32': return await installWindows(version);
+        case 'darwin': return await installMac(version);
+        case 'linux': return await installLinux(version);
     }
 }
 
 async function getDownloadUrl(version: string): Promise<[string, string]> {
-    let archiveName = undefined;
     switch (process.platform) {
-        case 'win32': archiveName = `unity-vcs-${version}-win.exe`; break;
-        case 'darwin': archiveName = `unity-vcs-${version}-mac.pkg.zip`; break;
-    }
-    switch (process.platform) {
-        case 'win32': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/windows/cloudedition`, archiveName];
-        case 'darwin': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/macosx/cloudedition`, archiveName];
+        case 'win32': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/windows/cloudedition`, `unity-vcs-${version}-win.exe`];
+        case 'darwin': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/macosx/cloudedition`, `unity-vcs-${version}-mac.pkg.zip`];
+        default: throw new Error(`Unsupported platform: ${process.platform}`);
     }
 }
 
@@ -72,8 +65,7 @@ async function installWindows(version: string) {
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
-    const installCmd = `Start-Process -FilePath "${downloadPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12' -Verb RunAs -NoNewWindow -Wait -PassThru`;
-    await exec.exec('pwsh', ['-Command', installCmd]);
+    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
 }
 
 async function installMac(version: string) {
