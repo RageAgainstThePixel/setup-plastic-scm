@@ -83796,7 +83796,10 @@ async function getToolLatestVersion() {
     const response = await fetch('https://www.plasticscm.com/download');
     const body = await response.text();
     const $ = cheerio.load(body);
+    core.info('Fetched body content for debugging purposes');
+    core.info(body);
     const versionText = $('strong:contains("Version:")').text();
+    core.info(`Extracted version text: ${versionText}`);
     const versionMatch = versionText.match(/Version:\s*(\d+\.\d+\.\d+\.\d+)/);
     if (!versionMatch) {
         throw new Error('Failed to parse version');
@@ -83840,8 +83843,9 @@ async function installLinux(version) {
     }
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
-    await exec.exec('echo "deb https://www.plasticscm.com/plasticrepo/stable/debian/ ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list');
-    await exec.exec('wget https://www.plasticscm.com/plasticrepo/stable/debian/Release.key -O - | sudo apt-key add -');
+    await exec.exec('sudo', ['sh', '-c', `echo "deb https://www.plasticscm.com/plasticrepo/stable/debian/ ./" > /etc/apt/sources.list.d/plasticscm-stable.list`]);
+    await exec.exec('wget', ['https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', '-O', '-']);
+    await exec.exec('sudo', ['apt-key', 'add', '-']);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', installArg]);
     core.addPath('/opt/plasticscm5');
