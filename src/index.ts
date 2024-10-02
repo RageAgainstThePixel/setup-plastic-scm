@@ -2,7 +2,6 @@ import core = require('@actions/core');
 import exec = require('@actions/exec');
 import glob = require('@actions/glob');
 import tc = require('@actions/tool-cache');
-import cheerio = require('cheerio');
 import path = require('path');
 
 const main = async () => {
@@ -70,7 +69,8 @@ async function installWindows(version: string) {
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
-    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    const installCmd = `Start-Process -FilePath "${downloadPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12' -Verb RunAs -NoNewWindow -Wait -PassThru`;
+    await exec.exec('pwsh', ['-Command', installCmd]);
 }
 
 async function installMac(version: string) {

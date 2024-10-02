@@ -33242,7 +33242,8 @@ async function installWindows(version) {
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
-    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    const installCmd = `Start-Process -FilePath "${downloadPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12' -Verb RunAs -NoNewWindow -Wait -PassThru`;
+    await exec.exec('pwsh', ['-Command', installCmd]);
 }
 async function installMac(version) {
     if (!version) {
