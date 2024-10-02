@@ -20,7 +20,7 @@ async function run(): Promise<void> {
     } catch (error) {
         await install();
     }
-    await exec.exec('cm', ['version']);
+    //await exec.exec('cm', ['version']);
 }
 
 function getTempDirectory(): string {
@@ -64,8 +64,8 @@ async function installWindows(version: string) {
     const [url, archiveName] = await getDownloadUrl(version);
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
-    await exec.exec('pwsh', ['-Command', `Invoke-WebRequest -Uri "${url}" -OutFile "${installerPath}"`]);
-    await exec.exec('pwsh', ['-Command', `Start-Process -Wait -FilePath "${installerPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12'`]);
+    const downloadPath = await tc.downloadTool(url, installerPath);
+    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
 }
 
 async function installMac(version: string) {
