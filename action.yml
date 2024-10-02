@@ -1,5 +1,8 @@
 name: setup-plastic-scm
 description: 'A GitHub action to setup and install Plastic SCM (Unity VCS)'
+branding:
+  icon: 'database'
+  color: 'blue'
 inputs:
   version:
     description: 'The version of Plastic SCM to install'
