@@ -3,8 +3,7 @@ description: 'A GitHub action to setup and install Plastic SCM (Unity VCS)'
 inputs:
   version:
     description: 'The version of Plastic SCM to install'
-    required: true
-    default: 'latest'
+    required: false
 runs:
   using: 'node20'
   main: 'dist/index.js'
