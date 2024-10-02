@@ -33194,6 +33194,12 @@ async function run() {
     catch (error) {
         await install();
     }
+    try {
+        await exec.exec('cm', ['version']);
+    }
+    catch (error) {
+        core.error(`Failed to call cm command!\n${error}`);
+    }
 }
 function getTempDirectory() {
     return process.env['RUNNER_TEMP'] || '';
@@ -33234,6 +33240,7 @@ async function installWindows(version) {
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    core.addPath('C:\\Program Files\\PlasticSCM5\\client');
 }
 async function installMac(version) {
     if (!version) {

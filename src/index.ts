@@ -20,7 +20,11 @@ async function run(): Promise<void> {
     } catch (error) {
         await install();
     }
-    //await exec.exec('cm', ['version']);
+    try {
+        await exec.exec('cm', ['version']);
+    } catch (error) {
+        core.error(`Failed to call cm command!\n${error}`);
+    }
 }
 
 function getTempDirectory(): string {
@@ -66,6 +70,7 @@ async function installWindows(version: string) {
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    core.addPath('C:\\Program Files\\PlasticSCM5\\client');
 }
 
 async function installMac(version: string) {
