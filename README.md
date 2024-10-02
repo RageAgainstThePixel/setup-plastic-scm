@@ -1,6 +1,6 @@
 # setup-plastic-scm
 
-A GitHub Actions template repository for TypeScript based Actions.
+A GitHub action to setup and install Plastic SCM (Unity VCS).
 
 ## How to use
 
@@ -12,3 +12,9 @@ steps:
   - run: |
       cm version
 ```
+
+### inputs
+
+| name | description | required |
+| ---- | ----------- | -------- |
+| version | The specific version to install | defaults to the latest |
