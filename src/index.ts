@@ -31,8 +31,11 @@ async function install() {
     const version = core.getInput('version');
     switch (process.platform) {
         case 'win32': await installWindows(version);
+            break;
         case 'linux': await installLinux(version);
+            break;
         case 'darwin': await installMac(version);
+            break;
     }
 }
 
