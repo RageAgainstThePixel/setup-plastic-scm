@@ -1,6 +1,6 @@
-# github-action-template
+# setup-plastic-scm
 
-A GitHub Actions template repository for TypeScript based Actions.
+A GitHub action to setup and install [Plastic SCM](https://www.plasticscm.com) (Unity VCS).
 
 ## How to use
 
@@ -8,13 +8,13 @@ A GitHub Actions template repository for TypeScript based Actions.
 
 ```yaml
 steps:
-  - uses: RageAgainstThePixel/github-action-template@v1
+  - uses: RageAgainstThePixel/setup-plastic-scm@v1
+  - run: |
+      cm version
 ```
 
 ### inputs
 
 | name | description | required |
 | ---- | ----------- | -------- |
-| .... | ........... | ........ |
-
-### outputs
+| version | The specific version to install | defaults to the latest |
