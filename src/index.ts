@@ -3,6 +3,7 @@ import exec = require('@actions/exec');
 import glob = require('@actions/glob');
 import tc = require('@actions/tool-cache');
 import path = require('path');
+import fs = require('fs');
 
 const main = async () => {
     try {
@@ -19,11 +20,11 @@ async function run(): Promise<void> {
         await exec.exec('cm', ['version']);
     } catch (error) {
         await install();
-    }
-    try {
-        await exec.exec('cm', ['version']);
-    } catch (error) {
-        core.error(`Failed to call cm command!\n${error}`);
+        try {
+            await exec.exec('cm', ['version']);
+        } catch (error) {
+            core.error(`Failed to call cm command!\n${error}`);
+        }
     }
 }
 
@@ -70,6 +71,7 @@ async function installWindows(version: string) {
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    await fs.promises.unlink(downloadPath);
     core.addPath('C:\\Program Files\\PlasticSCM5\\client');
 }
 
@@ -82,13 +84,13 @@ async function installMac(version: string) {
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     const expandedPath = await tc.extractZip(downloadPath);
-    // use actions glob for the pkg file
     const globber = await glob.create(path.join(expandedPath, '*.pkg'));
     const pkgPaths: string[] = await globber.glob();
     if (!pkgPaths || pkgPaths.length === 0) {
         throw new Error('Failed to find the installer package');
     }
     await exec.exec('sudo', ['installer', '-pkg', pkgPaths[0], '-target', '/Applications']);
+    await fs.promises.unlink(downloadPath);
 }
 
 async function installLinux(version: string) {
