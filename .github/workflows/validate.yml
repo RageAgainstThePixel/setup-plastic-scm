@@ -20,4 +20,6 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest ]
     steps:
       - uses: actions/checkout@v4
-      - run: echo "hello world"
+      - uses: ./ # RageAgainstThePixel/setup-plastic-scm@v1
+      - run: |
+          cm version

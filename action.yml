@@ -1,8 +1,10 @@
-name: github-action-template
-description: 'A GitHub Actions template repository for JavaScript based Actions'
-# inputs:
-# outputs:
+name: setup-plastic-scm
+description: 'A GitHub action to setup and install Plastic SCM (Unity VCS)'
+inputs:
+  version:
+    description: 'The version of Plastic SCM to install'
+    required: true
+    default: 'latest'
 runs:
   using: 'node20'
   main: 'dist/index.js'
-  #post: 'dist/index.js'

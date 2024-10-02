@@ -1,4 +1,4 @@
-# github-action-template
+# setup-plastic-scm
 
 A GitHub Actions template repository for TypeScript based Actions.
 
@@ -8,13 +8,7 @@ A GitHub Actions template repository for TypeScript based Actions.
 
 ```yaml
 steps:
-  - uses: RageAgainstThePixel/github-action-template@v1
+  - uses: RageAgainstThePixel/setup-plastic-scm@v1
+  - run: |
+      cm version
 ```
-
-### inputs
-
-| name | description | required |
-| ---- | ----------- | -------- |
-| .... | ........... | ........ |
-
-### outputs

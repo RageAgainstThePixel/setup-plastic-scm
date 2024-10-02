@@ -1,18 +1,105 @@
 import core = require('@actions/core');
-
-const IS_POST = !!core.getState('isPost');
+import exec = require('@actions/exec');
+import glob = require('@actions/glob');
+import tc = require('@actions/tool-cache');
+import cheerio = require('cheerio');
+import path = require('path');
 
 const main = async () => {
     try {
-        if (!IS_POST) {
-            core.info('Hello World!');
-            core.saveState('isPost', true);
-        } else {
-            core.info('Hello World! (post)');
-        }
+        run();
     } catch (error) {
         core.setFailed(error);
     }
 }
 
 main();
+
+async function run(): Promise<void> {
+    try {
+        await exec.exec('cm', ['version']);
+    } catch (error) {
+        await install();
+    }
+    await exec.exec('cm', ['version']);
+}
+
+function getTempDirectory(): string {
+    return process.env['RUNNER_TEMP'] || '';
+}
+
+async function install() {
+    const version = core.getInput('version');
+    switch (process.platform) {
+        case 'win32': await installWindows(version);
+        case 'linux': await installLinux(version);
+        case 'darwin': await installMac(version);
+    }
+}
+
+async function getDownloadUrl(version: string): Promise<[string, string]> {
+    let archiveName = undefined;
+    switch (process.platform) {
+        case 'win32': archiveName = `unity-vcs-${version}-win.exe`; break;
+        case 'darwin': archiveName = `unity-vcs-${version}-mac.pkg.zip`; break;
+    }
+    switch (process.platform) {
+        case 'win32': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/windows/cloudedition?flags=None`, archiveName];
+        case 'darwin': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/macosx/cloudedition?flags=None`, archiveName];
+    }
+}
+
+async function getToolLatestVersion(): Promise<string> {
+    const response = await fetch('https://www.plasticscm.com/download');
+    const body = await response.text();
+    const $ = cheerio.load(body);
+    const versionText = $('strong:contains("Version:")').text();
+    const versionMatch = versionText.match(/Version:\s*(\d+\.\d+\.\d+\.\d+)/);
+    if (!versionMatch) {
+        throw new Error('Failed to parse version');
+    }
+    return versionMatch[1];
+}
+
+async function installWindows(version: string) {
+    if (!version) {
+        version = await getToolLatestVersion();
+    }
+    const [url, archiveName] = await getDownloadUrl(version);
+    const installerPath = path.join(getTempDirectory(), archiveName);
+    const downloadPath = await tc.downloadTool(url, installerPath);
+    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    core.addPath('C:\\Program Files\\PlasticSCM5');
+}
+
+async function installMac(version: string) {
+    if (!version) {
+        version = await getToolLatestVersion();
+    }
+    const [url, archiveName] = await getDownloadUrl(version);
+    const installerPath = path.join(getTempDirectory(), archiveName);
+    const downloadPath = await tc.downloadTool(url, installerPath);
+    const expandedPath = await tc.extractZip(downloadPath);
+    // use actions glob for the pkg file
+    const globber = await glob.create(path.join(expandedPath, '*.pkg'));
+    const pkgPaths: string[] = await globber.glob();
+    if (!pkgPaths || pkgPaths.length === 0) {
+        throw new Error('Failed to find the installer package');
+    }
+    await exec.exec('sudo', ['installer', '-pkg', pkgPaths[0], '-target', '/Applications']);
+    core.addPath('/Applications/PlasticSCM.app');
+}
+
+async function installLinux(version: string) {
+    let installArg = 'plasticscm-cloud';
+    if (version) {
+        installArg += `=${version}`;
+    }
+    await exec.exec('sudo', ['apt-get', 'update']);
+    await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
+    await exec.exec('echo', ['deb', 'https://www.plasticscm.com/plasticrepo/stable/ubuntu/', './', '|', 'sudo', 'tee', '/etc/apt/sources.list.d/plasticscm-stable.list']);
+    await exec.exec('wget', ['https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key', '-O', '-', '|', 'sudo', 'apt-key', 'add', '-']);
+    await exec.exec('sudo', ['apt-get', 'update']);
+    await exec.exec('sudo', ['apt-get', 'install', installArg]);
+    core.addPath('/opt/plasticscm5');
+}
