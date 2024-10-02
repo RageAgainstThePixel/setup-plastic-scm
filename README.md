@@ -1,6 +1,6 @@
 # setup-plastic-scm
 
-A GitHub action to setup and install Plastic SCM (Unity VCS).
+A GitHub action to setup and install [Plastic SCM](https://www.plasticscm.com) (Unity VCS).
 
 ## How to use
 
