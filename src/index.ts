@@ -44,12 +44,13 @@ async function getDownloadUrl(version: string): Promise<[string, string]> {
         case 'darwin': archiveName = `unity-vcs-${version}-mac.pkg.zip`; break;
     }
     switch (process.platform) {
-        case 'win32': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/windows/cloudedition?flags=None`, archiveName];
-        case 'darwin': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/macosx/cloudedition?flags=None`, archiveName];
+        case 'win32': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/windows/cloudedition`, archiveName];
+        case 'darwin': return [`https://www.plasticscm.com/download/downloadinstaller/${version}/plasticscm/macosx/cloudedition`, archiveName];
     }
 }
 
 async function getToolLatestVersion(): Promise<string> {
+    core.debug('Getting latest version...');
     const response = await fetch('https://www.plasticscm.com/download');
     const body = await response.text();
     const $ = cheerio.load(body);
@@ -58,7 +59,9 @@ async function getToolLatestVersion(): Promise<string> {
     if (!versionMatch) {
         throw new Error('Failed to parse version');
     }
-    return versionMatch[1];
+    const version = versionMatch[1];
+    core.debug(`Latest version: ${version}`);
+    return version;
 }
 
 async function installWindows(version: string) {
@@ -66,6 +69,7 @@ async function installWindows(version: string) {
         version = await getToolLatestVersion();
     }
     const [url, archiveName] = await getDownloadUrl(version);
+    core.debug(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
@@ -77,6 +81,7 @@ async function installMac(version: string) {
         version = await getToolLatestVersion();
     }
     const [url, archiveName] = await getDownloadUrl(version);
+    core.debug(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     const expandedPath = await tc.extractZip(downloadPath);
@@ -97,8 +102,8 @@ async function installLinux(version: string) {
     }
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
-    await exec.exec('echo', ['deb', 'https://www.plasticscm.com/plasticrepo/stable/ubuntu/', './', '|', 'sudo', 'tee', '/etc/apt/sources.list.d/plasticscm-stable.list']);
-    await exec.exec('wget', ['https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key', '-O', '-', '|', 'sudo', 'apt-key', 'add', '-']);
+    await exec.exec('echo deb https://www.plasticscm.com/plasticrepo/stable/ubuntu/ ./ | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list');
+    await exec.exec('wget https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key -O - | sudo apt-key add -');
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', installArg]);
     core.addPath('/opt/plasticscm5');
