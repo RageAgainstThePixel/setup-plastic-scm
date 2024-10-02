@@ -33233,8 +33233,8 @@ async function installWindows(version) {
     const [url, archiveName] = await getDownloadUrl(version);
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
-    const downloadPath = await tc.downloadTool(url, installerPath);
-    await exec.exec('pwsh', ['-Command', `Start-Process -Wait -FilePath "${downloadPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12'`]);
+    await exec.exec('pwsh', ['-Command', `Invoke-WebRequest -Uri "${url}" -OutFile "${installerPath}"`]);
+    await exec.exec('pwsh', ['-Command', `Start-Process -Wait -FilePath "${installerPath}" -ArgumentList '--mode unattended --unattendedmodeui none --disable-components ideintegrations,eclipse,mylyn,intellij12'`]);
 }
 async function installMac(version) {
     if (!version) {
