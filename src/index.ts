@@ -71,7 +71,6 @@ async function installWindows(version: string) {
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
     await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
-    core.addPath('C:\\Program Files\\PlasticSCM5\\client');
 }
 
 async function installMac(version: string) {
@@ -90,8 +89,8 @@ async function installMac(version: string) {
         throw new Error('Failed to find the installer package');
     }
     await exec.exec('sudo', ['installer', '-pkg', pkgPaths[0], '-target', '/Applications']);
-    core.addPath('/Applications/PlasticSCM.app');
 }
+
 async function installLinux(version: string) {
     let installArg = 'plasticscm-cloud';
     if (version) {
@@ -100,9 +99,8 @@ async function installLinux(version: string) {
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
     await exec.exec('sudo', ['sh', '-c', `echo "deb https://www.plasticscm.com/plasticrepo/stable/debian/ ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list`]);
-    await exec.exec('sudo', ['wget', 'https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', '-O', '-']);
+    await exec.exec('sudo', ['wget', 'https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', '-O', 'Release.key']);
     await exec.exec('sudo', ['apt-key', 'add', 'Release.key']);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', installArg]);
-    core.addPath('/opt/plasticscm5');
 }
