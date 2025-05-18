@@ -70,7 +70,7 @@ async function installWindows(version: string) {
     core.info(`Downloading ${archiveName} from ${url}...`);
     const installerPath = path.join(getTempDirectory(), archiveName);
     const downloadPath = await tc.downloadTool(url, installerPath);
-    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none', '--disable-components', 'ideintegrations,eclipse,mylyn,intellij12']);
+    await exec.exec(`cmd`, ['/c', downloadPath, '--mode', 'unattended', '--unattendedmodeui', 'none']);
     await fs.promises.unlink(downloadPath);
     core.addPath('C:\\Program Files\\PlasticSCM5\\client');
 }
