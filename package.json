@@ -18,11 +18,10 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/glob": "^0.5.1",
-    "@actions/tool-cache": "^2.0.2",
-    "cheerio": "^1.2.0"
+    "@actions/tool-cache": "^2.0.2"
   },
   "devDependencies": {
-    "@types/node": "^22.19.19",
+    "@types/node": "^24.0.0",
     "@vercel/ncc": "^0.34.0",
     "shx": "^0.4.0",
     "typescript": "^5.9.3"
