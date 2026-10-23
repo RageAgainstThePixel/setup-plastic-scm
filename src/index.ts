@@ -2,6 +2,7 @@ import core = require('@actions/core');
 import exec = require('@actions/exec');
 import glob = require('@actions/glob');
 import tc = require('@actions/tool-cache');
+import io = require('@actions/io');
 import path = require('path');
 import fs = require('fs');
 
@@ -16,22 +17,31 @@ const main = async () => {
 main();
 
 async function run(): Promise<void> {
-    const version = core.getInput('version').trim();
-    const installedVersion = await getInstalledVersion();
-    if (installedVersion) {
-        if (!version || version === installedVersion) {
-            return;
-        }
+    let version = (core.getInput('version') || 'latest').trim().toLowerCase();
+    if (version === 'latest') {
+        version = '';
+    } else if (!/^\d+\.\d+\.\d+\.\d+$/.test(version)) {
+        throw new Error(`Invalid version string: ${version}`);
+    }
+    let installedVersion = await getInstalledVersion();
+    if (installedVersion && version && version !== installedVersion) {
         core.info(`Installed version ${installedVersion} does not match requested version ${version}`);
     }
-    await install(version);
-    const newVersion = await getInstalledVersion();
-    if (!newVersion) {
+    if (!installedVersion || (version && version !== installedVersion)) {
+        await install(version);
+        installedVersion = await getInstalledVersion();
+    }
+    if (!installedVersion) {
         throw new Error('Failed to call cm command after install!');
     }
-    if (version && version !== newVersion) {
-        core.warning(`Installed version ${newVersion} does not match requested version ${version}`);
+    if (version && version !== installedVersion) {
+        throw new Error(`Installed version ${installedVersion} does not match requested version ${version}`);
     }
+    const cmPath = await io.which('cm', true);
+    core.info(`PLASTIC_SCM_PATH -> ${cmPath}`);
+    core.exportVariable('PLASTIC_SCM_PATH', cmPath);
+    core.setOutput('path', cmPath);
+    core.setOutput('version', installedVersion);
 }
 
 async function getInstalledVersion(): Promise<string | undefined> {
