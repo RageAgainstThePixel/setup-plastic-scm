@@ -7,7 +7,7 @@ import fs = require('fs');
 
 const main = async () => {
     try {
-        run();
+        await run();
     } catch (error) {
         core.setFailed(error);
     }
@@ -16,24 +16,46 @@ const main = async () => {
 main();
 
 async function run(): Promise<void> {
-    try {
-        await exec.exec('cm', ['version']);
-    } catch (error) {
-        await install();
-        try {
-            await exec.exec('cm', ['version']);
-        } catch (error) {
-            core.error(`Failed to call cm command!\n${error}`);
+    const version = core.getInput('version').trim();
+    const installedVersion = await getInstalledVersion();
+    if (installedVersion) {
+        if (!version || version === installedVersion) {
+            return;
         }
+        core.info(`Installed version ${installedVersion} does not match requested version ${version}`);
     }
+    await install(version);
+    const newVersion = await getInstalledVersion();
+    if (!newVersion) {
+        throw new Error('Failed to call cm command after install!');
+    }
+    if (version && version !== newVersion) {
+        core.warning(`Installed version ${newVersion} does not match requested version ${version}`);
+    }
+}
+
+async function getInstalledVersion(): Promise<string | undefined> {
+    let output = '';
+    try {
+        await exec.exec('cm', ['version'], {
+            listeners: {
+                stdout: (data: Buffer) => {
+                    output += data.toString();
+                }
+            }
+        });
+    } catch (error) {
+        return undefined;
+    }
+    const versionMatch = output.match(/\d+\.\d+\.\d+\.\d+/);
+    return versionMatch ? versionMatch[0] : output.trim();
 }
 
 function getTempDirectory(): string {
     return process.env['RUNNER_TEMP'] || '';
 }
 
-async function install() {
-    const version = core.getInput('version');
+async function install(version: string) {
     switch (process.platform) {
         case 'win32': return await installWindows(version);
         case 'darwin': return await installMac(version);
@@ -100,9 +122,14 @@ async function installLinux(version: string) {
     }
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
-    await exec.exec('sudo', ['sh', '-c', `echo "deb https://www.plasticscm.com/plasticrepo/stable/debian/ ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list`]);
-    await exec.exec('sudo', ['wget', 'https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', '-O', 'Release.key']);
-    await exec.exec('sudo', ['apt-key', 'add', 'Release.key']);
+    const keyring = '/etc/apt/keyrings/plasticscm-stable.gpg';
+    const keyPath = path.join(getTempDirectory(), 'plasticscm-Release.key');
+    await tc.downloadTool('https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', keyPath);
+    await exec.exec('sudo', ['install', '-d', '-m', '0755', '/etc/apt/keyrings']);
+    await exec.exec('sudo', ['gpg', '--batch', '--yes', '--dearmor', '-o', keyring, keyPath]);
+    await exec.exec('sudo', ['chmod', '0644', keyring]);
+    await fs.promises.unlink(keyPath);
+    await exec.exec('sudo', ['sh', '-c', `echo "deb [signed-by=${keyring}] https://www.plasticscm.com/plasticrepo/stable/debian/ ./" > /etc/apt/sources.list.d/plasticscm-stable.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
-    await exec.exec('sudo', ['apt-get', 'install', installArg]);
+    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
 }
