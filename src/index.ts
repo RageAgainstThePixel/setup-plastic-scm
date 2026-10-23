@@ -130,6 +130,8 @@ async function installLinux(version: string) {
     if (version) {
         installArg += `=${version}`;
     }
+    // drop the v1 repository first: it now returns 403 and fails apt-get update
+    await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
     // https://docs.unity.com/en-us/unity-version-control/install-uvcs-on-linux
@@ -140,7 +142,6 @@ async function installLinux(version: string) {
     await exec.exec('sudo', ['gpg', '--batch', '--yes', '--dearmor', '-o', keyring, keyPath]);
     await exec.exec('sudo', ['chmod', '0644', keyring]);
     await fs.promises.unlink(keyPath);
-    await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
     await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
