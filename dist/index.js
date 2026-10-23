@@ -40102,14 +40102,15 @@ async function installLinux(version) {
     }
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
-    const keyring = '/etc/apt/keyrings/plasticscm-stable.gpg';
-    const keyPath = path.join(getTempDirectory(), 'plasticscm-Release.key');
-    await tc.downloadTool('https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', keyPath);
+    const keyring = '/etc/apt/keyrings/uvcs.gpg';
+    const keyPath = path.join(getTempDirectory(), 'uvcs-public.key');
+    await tc.downloadTool('https://uvcs.unity3d.com/linux/keys/public', keyPath);
     await exec.exec('sudo', ['install', '-d', '-m', '0755', '/etc/apt/keyrings']);
     await exec.exec('sudo', ['gpg', '--batch', '--yes', '--dearmor', '-o', keyring, keyPath]);
     await exec.exec('sudo', ['chmod', '0644', keyring]);
     await fs.promises.unlink(keyPath);
-    await exec.exec('sudo', ['sh', '-c', `echo "deb [signed-by=${keyring}] https://www.plasticscm.com/plasticrepo/stable/debian/ ./" > /etc/apt/sources.list.d/plasticscm-stable.list`]);
+    await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
+    await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
 }
