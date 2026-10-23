@@ -5,8 +5,14 @@ branding:
   color: 'blue'
 inputs:
   version:
-    description: 'The version of Plastic SCM to install'
+    description: 'The version of Plastic SCM to install, for example 11.0.16.9156'
     required: false
+    default: 'latest'
+outputs:
+  path:
+    description: 'The full path to the cm executable.'
+  version:
+    description: 'The installed Plastic SCM version.'
 runs:
   using: 'node24'
   main: 'dist/index.js'
