@@ -126,10 +126,17 @@ async function installMac(version: string) {
 }
 
 async function installLinux(version: string) {
-    let installArg = 'plasticscm-cloud';
-    if (version) {
-        installArg += `=${version}`;
-    }
+    // the deb version carries a revision suffix (11.0.16.10484-1) and every
+    // dependency is pinned to the same version, so pin the whole set
+    const packages = [
+        'plasticscm-cloud',
+        'plasticscm-client-complete',
+        'plasticscm-client-core',
+        'plasticscm-client-gui',
+        'plasticscm-server-core',
+        'plasticscm-theme',
+    ];
+    const installArgs = version ? packages.map(p => `${p}=${version}-*`) : [packages[0]];
     // drop the v1 repository first: it now returns 403 and fails apt-get update
     await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
     await exec.exec('sudo', ['apt-get', 'update']);
@@ -144,5 +151,5 @@ async function installLinux(version: string) {
     await fs.promises.unlink(keyPath);
     await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
-    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
+    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', ...installArgs]);
 }

@@ -40096,10 +40096,15 @@ async function installMac(version) {
     await fs.promises.unlink(downloadPath);
 }
 async function installLinux(version) {
-    let installArg = 'plasticscm-cloud';
-    if (version) {
-        installArg += `=${version}`;
-    }
+    const packages = [
+        'plasticscm-cloud',
+        'plasticscm-client-complete',
+        'plasticscm-client-core',
+        'plasticscm-client-gui',
+        'plasticscm-server-core',
+        'plasticscm-theme',
+    ];
+    const installArgs = version ? packages.map(p => `${p}=${version}-*`) : [packages[0]];
     await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
@@ -40112,7 +40117,7 @@ async function installLinux(version) {
     await fs.promises.unlink(keyPath);
     await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
-    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
+    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', ...installArgs]);
 }
 
 })();

@@ -20,10 +20,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        version: [latest, 11.0.16.10484]
     steps:
       - uses: actions/checkout@v6
       - uses: ./ # RageAgainstThePixel/setup-plastic-scm@v2
         id: setup-plastic-scm
+        with:
+          version: ${{ matrix.version }}
       - run: |
           cm version
           echo "path: ${{ steps.setup-plastic-scm.outputs.path }}"
