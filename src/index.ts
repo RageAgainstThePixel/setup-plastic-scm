@@ -2,12 +2,13 @@ import core = require('@actions/core');
 import exec = require('@actions/exec');
 import glob = require('@actions/glob');
 import tc = require('@actions/tool-cache');
+import io = require('@actions/io');
 import path = require('path');
 import fs = require('fs');
 
 const main = async () => {
     try {
-        run();
+        await run();
     } catch (error) {
         core.setFailed(error);
     }
@@ -16,24 +17,55 @@ const main = async () => {
 main();
 
 async function run(): Promise<void> {
-    try {
-        await exec.exec('cm', ['version']);
-    } catch (error) {
-        await install();
-        try {
-            await exec.exec('cm', ['version']);
-        } catch (error) {
-            core.error(`Failed to call cm command!\n${error}`);
-        }
+    let version = (core.getInput('version') || 'latest').trim().toLowerCase();
+    if (version === 'latest') {
+        version = '';
+    } else if (!/^\d+\.\d+\.\d+\.\d+$/.test(version)) {
+        throw new Error(`Invalid version string: ${version}`);
     }
+    let installedVersion = await getInstalledVersion();
+    if (installedVersion && version && version !== installedVersion) {
+        core.info(`Installed version ${installedVersion} does not match requested version ${version}`);
+    }
+    if (!installedVersion || (version && version !== installedVersion)) {
+        await install(version);
+        installedVersion = await getInstalledVersion();
+    }
+    if (!installedVersion) {
+        throw new Error('Failed to call cm command after install!');
+    }
+    if (version && version !== installedVersion) {
+        throw new Error(`Installed version ${installedVersion} does not match requested version ${version}`);
+    }
+    const cmPath = await io.which('cm', true);
+    core.info(`PLASTIC_SCM_PATH -> ${cmPath}`);
+    core.exportVariable('PLASTIC_SCM_PATH', cmPath);
+    core.setOutput('path', cmPath);
+    core.setOutput('version', installedVersion);
+}
+
+async function getInstalledVersion(): Promise<string | undefined> {
+    let output = '';
+    try {
+        await exec.exec('cm', ['version'], {
+            listeners: {
+                stdout: (data: Buffer) => {
+                    output += data.toString();
+                }
+            }
+        });
+    } catch (error) {
+        return undefined;
+    }
+    const versionMatch = output.match(/\d+\.\d+\.\d+\.\d+/);
+    return versionMatch ? versionMatch[0] : output.trim();
 }
 
 function getTempDirectory(): string {
     return process.env['RUNNER_TEMP'] || '';
 }
 
-async function install() {
-    const version = core.getInput('version');
+async function install(version: string) {
     switch (process.platform) {
         case 'win32': return await installWindows(version);
         case 'darwin': return await installMac(version);
@@ -98,11 +130,19 @@ async function installLinux(version: string) {
     if (version) {
         installArg += `=${version}`;
     }
+    // drop the v1 repository first: it now returns 403 and fails apt-get update
+    await exec.exec('sudo', ['rm', '-f', '/etc/apt/sources.list.d/plasticscm-stable.list']);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', 'apt-transport-https']);
-    await exec.exec('sudo', ['sh', '-c', `echo "deb https://www.plasticscm.com/plasticrepo/stable/debian/ ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list`]);
-    await exec.exec('sudo', ['wget', 'https://www.plasticscm.com/plasticrepo/stable/debian/Release.key', '-O', 'Release.key']);
-    await exec.exec('sudo', ['apt-key', 'add', 'Release.key']);
+    // https://docs.unity.com/en-us/unity-version-control/install-uvcs-on-linux
+    const keyring = '/etc/apt/keyrings/uvcs.gpg';
+    const keyPath = path.join(getTempDirectory(), 'uvcs-public.key');
+    await tc.downloadTool('https://uvcs.unity3d.com/linux/keys/public', keyPath);
+    await exec.exec('sudo', ['install', '-d', '-m', '0755', '/etc/apt/keyrings']);
+    await exec.exec('sudo', ['gpg', '--batch', '--yes', '--dearmor', '-o', keyring, keyPath]);
+    await exec.exec('sudo', ['chmod', '0644', keyring]);
+    await fs.promises.unlink(keyPath);
+    await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
-    await exec.exec('sudo', ['apt-get', 'install', installArg]);
+    await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', installArg]);
 }
