@@ -39993,6 +39993,7 @@ const main = async () => {
 };
 main();
 async function run() {
+    var _a;
     let version = (core.getInput('version') || 'latest').trim().toLowerCase();
     if (version === 'latest') {
         version = '';
@@ -40000,13 +40001,14 @@ async function run() {
     else if (!/^\d+\.\d+\.\d+\.\d+$/.test(version)) {
         throw new Error(`Invalid version string: ${version}`);
     }
-    let installedVersion = await getInstalledVersion();
+    let cm = 'cm';
+    let installedVersion = await getInstalledVersion(cm);
     if (installedVersion && version && version !== installedVersion) {
         core.info(`Installed version ${installedVersion} does not match requested version ${version}`);
     }
     if (!installedVersion || (version && version !== installedVersion)) {
-        await install(version);
-        installedVersion = await getInstalledVersion();
+        cm = (_a = (await install(version))) !== null && _a !== void 0 ? _a : cm;
+        installedVersion = await getInstalledVersion(cm);
     }
     if (!installedVersion) {
         throw new Error('Failed to call cm command after install!');
@@ -40014,16 +40016,16 @@ async function run() {
     if (version && version !== installedVersion) {
         throw new Error(`Installed version ${installedVersion} does not match requested version ${version}`);
     }
-    const cmPath = await io.which('cm', true);
+    const cmPath = cm === 'cm' ? await io.which(cm, true) : cm;
     core.info(`PLASTIC_SCM_PATH -> ${cmPath}`);
     core.exportVariable('PLASTIC_SCM_PATH', cmPath);
     core.setOutput('path', cmPath);
     core.setOutput('version', installedVersion);
 }
-async function getInstalledVersion() {
+async function getInstalledVersion(cm) {
     let output = '';
     try {
-        await exec.exec('cm', ['version'], {
+        await exec.exec(cm, ['version'], {
             listeners: {
                 stdout: (data) => {
                     output += data.toString();
@@ -40042,8 +40044,12 @@ function getTempDirectory() {
 }
 async function install(version) {
     switch (process.platform) {
-        case 'win32': return await installWindows(version);
-        case 'darwin': return await installMac(version);
+        case 'win32':
+            await installWindows(version);
+            return undefined;
+        case 'darwin':
+            await installMac(version);
+            return undefined;
         case 'linux': return await installLinux(version);
     }
 }
@@ -40118,6 +40124,12 @@ async function installLinux(version) {
     await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', ...installArgs]);
+    const cm = '/usr/bin/cm';
+    const cmDirectory = path.dirname(await fs.promises.realpath(cm));
+    if (cmDirectory !== '/usr/bin') {
+        core.addPath(cmDirectory);
+    }
+    return cm;
 }
 
 })();
