@@ -154,11 +154,14 @@ async function installLinux(version: string) {
     await exec.exec('sudo', ['sh', '-c', `echo "deb [arch=amd64 signed-by=${keyring}] https://uvcs.unity3d.com/linux/repos/deb stable main" > /etc/apt/sources.list.d/uvcs.list`]);
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', ...installArgs]);
-    // apt installs cm to /usr/bin; put its real folder first on PATH for later steps too, unless that is /usr/bin itself
+    // apt installs cm to /usr/bin; a folder holding only a link to it goes first on PATH, so later steps run this cm
+    // too, without putting all of /usr/bin ahead of other tools
     const cm = '/usr/bin/cm';
-    const cmDirectory = path.dirname(await fs.promises.realpath(cm));
-    if (cmDirectory !== '/usr/bin') {
-        core.addPath(cmDirectory);
-    }
+    const linkDirectory = path.join(getTempDirectory(), 'setup-plastic-scm-bin');
+    const link = path.join(linkDirectory, 'cm');
+    await fs.promises.mkdir(linkDirectory, { recursive: true });
+    await fs.promises.rm(link, { force: true });
+    await fs.promises.symlink(cm, link);
+    core.addPath(linkDirectory);
     return cm;
 }

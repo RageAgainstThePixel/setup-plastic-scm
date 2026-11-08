@@ -40125,10 +40125,12 @@ async function installLinux(version) {
     await exec.exec('sudo', ['apt-get', 'update']);
     await exec.exec('sudo', ['apt-get', 'install', '-y', '--allow-downgrades', ...installArgs]);
     const cm = '/usr/bin/cm';
-    const cmDirectory = path.dirname(await fs.promises.realpath(cm));
-    if (cmDirectory !== '/usr/bin') {
-        core.addPath(cmDirectory);
-    }
+    const linkDirectory = path.join(getTempDirectory(), 'setup-plastic-scm-bin');
+    const link = path.join(linkDirectory, 'cm');
+    await fs.promises.mkdir(linkDirectory, { recursive: true });
+    await fs.promises.rm(link, { force: true });
+    await fs.promises.symlink(cm, link);
+    core.addPath(linkDirectory);
     return cm;
 }
 
